@@ -6,8 +6,12 @@
 #include <sys/timeb.h>
 #include <string.h>
 
+
+#include "rlu.h"
+
 #define MAX            100000000
-#define INT_MAX        100000000
+// #define INT_MAX        100000000
+#define PR_INT_MAX        100000000
 #define BILLION 1E9
 
 //Thread Structure
@@ -77,25 +81,25 @@ void* do_work(void* args)
 
    while(iterations>0)
    {
-      if(tid==0)
-         dp=0;
-      pthread_barrier_wait(arg->barrier);
+      // if(tid==0)
+      //    dp=0;
+      // pthread_barrier_wait(arg->barrier);
 
-      //for no outlinks, dangling pages calculation
-      for(v=i_start;v<i_stop;v++)
-      {
-         if(dangling[v]==1)
-         {
-            dp_tid[tid] = dp_tid[tid] + d*(PR[v]/N_real);
-            //printf("\n %f %f %f %f",dp,d,D[uu],N_real);
-         }
-      }
-      pthread_mutex_lock(&lock);
-      dp = dp + dp_tid[tid];
-      pthread_mutex_unlock(&lock);
-      //printf("\n Outlinks Done %f",dp);
+      // //for no outlinks, dangling pages calculation
+      // for(v=i_start;v<i_stop;v++)
+      // {
+      //    if(dangling[v]==1)
+      //    {
+      //       dp_tid[tid] = dp_tid[tid] + d*(PR[v]/N_real);
+      //       //printf("\n %f %f %f %f",dp,d,D[uu],N_real);
+      //    }
+      // }
+      // pthread_mutex_lock(&lock);
+      // dp = dp + dp_tid[tid];
+      // pthread_mutex_unlock(&lock);
+      // // printf("\n Outlinks Done %f",dp);
 
-      pthread_barrier_wait(arg->barrier);
+      // pthread_barrier_wait(arg->barrier);
 
       v=0;
 
@@ -142,6 +146,9 @@ void* do_work(void* args)
 //Main 
 int main(int argc, char** argv)
 {
+
+   RLU_INIT(RLU_TYPE_FINE_GRAINED, 1);
+
 
    FILE *file0 = NULL;
    FILE *f = NULL;
@@ -252,7 +259,7 @@ int main(int argc, char** argv)
       for(int j=0;j<DEG;j++)
       {
          W[i][j] = 1000000000;
-         W_index[i][j] = INT_MAX;
+         W_index[i][j] = PR_INT_MAX;
       }
       test[i]=0;
       exist[i]=0;
