@@ -7,8 +7,6 @@
 #include <string.h>
 
 
-#include "rlu.h"
-
 #define MAX            100000000
 // #define INT_MAX        100000000
 #define PR_INT_MAX        100000000
@@ -146,10 +144,6 @@ void* do_work(void* args)
 //Main 
 int main(int argc, char** argv)
 {
-
-   RLU_INIT(RLU_TYPE_FINE_GRAINED, 1);
-
-
    FILE *file0 = NULL;
    FILE *f = NULL;
    int N = 0;                         //Total vertices
