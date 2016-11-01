@@ -6,9 +6,6 @@
 #include <sys/timeb.h>
 #include <string.h>
 
-
-#include "rlu.h"
-
 #define MAX            100000000
 // #define INT_MAX        100000000
 #define PR_INT_MAX        100000000
@@ -20,7 +17,7 @@ typedef struct
    int*      local_min;
    int*      global_min;
    int*      Q;
-   double**   PR;
+   double*   PR;
    double**  W;
    int**     W_index;
    int       tid;
@@ -28,12 +25,7 @@ typedef struct
    int       N;
    int       DEG;
    pthread_barrier_t* barrier;
-   rlu_thread_data_t rlu_td;
 } thread_arg_t;
-
-typedef struct test_rlu {
-   rlu_thread_data_t rlu_td;
-} test_rlu_t;
 
 //Global Variables
 pthread_mutex_t lock;           //single lock
@@ -54,7 +46,7 @@ thread_arg_t thread_arg[50];//[1024];    //MAX threads
 pthread_t   thread_handle[1024];  //pthread handlers
 
 //Function declarations
-int initialize_single_source(double** PR, int* Q, int source, int N, double initial_rank);
+int initialize_single_source(double* PR, int* Q, int source, int N, double initial_rank);
 void init_weights(int N, int DEG, double** W, int** W_index);
 
 //Primary Parallel Function
@@ -62,7 +54,7 @@ void* do_work(void* args)
 {
    volatile thread_arg_t* arg = (thread_arg_t*) args;
    int tid                    = arg->tid;
-   double** PR                 = arg->PR;
+   double* PR                 = arg->PR;
    int** W_index              = arg->W_index;
    const int N                = arg->N;
    int v                      = 0;      //variable for current vertex
@@ -71,9 +63,6 @@ void* do_work(void* args)
    double N_real              = N;
    double tid_d = tid;
    double P_d = arg->P;
-
-   // arg->rlu_td;
-   // RLU_THREAD_INIT(self);
 
    //Allocate work among threads
    double start_d = (tid_d) * (N_real/P_d);
@@ -115,36 +104,45 @@ void* do_work(void* args)
       //Calculate Pageranks
       for(v=i_start;v<i_stop;v++)
       {
+         double tmp = 0.15;
          if(exist[v]==1)   //if vertex exists
          {
-            pgtmp[v] = r;//dp + (r)/N_real;     //dangling pointer usage commented out
+            // pgtmp[v] = r;//dp + (r)/N_real;     //dangling pointer usage commented out
+            tmp = r;
             //printf("\n pgtmp:%f test:%d",pgtmp[uu],test[uu]);
             int j;
             for(j=0;j<test[v];j++)
             {
-               //if inlink
-               //printf("\nuu:%d id:%d",uu,W_index[uu][j]);
-               pgtmp[v] = pgtmp[v] + (d*(*(PR[W_index[v][j]]))/outlinks[W_index[v][j]]);  //replace d with dp if dangling PRs required
+               // //if inlink
+               // //printf("\nuu:%d id:%d",uu,W_index[uu][j]);
+               // pgtmp[v] = pgtmp[v] + (d*(*(PR[W_index[v][j]]))/outlinks[W_index[v][j]]);  //replace d with dp if dangling PRs required
+               tmp = tmp + (d*(PR[W_index[v][j]])/outlinks[W_index[v][j]]);
             }
          }
-				 if(pgtmp[v]>=1.0)
-					 pgtmp[v] = 1.0;
-      }
-      //printf("\n Ranks done");
-
-      pthread_barrier_wait(arg->barrier);
-
-      //Put temporary pageranks into final pageranks
-      for(v=i_start;v<i_stop;v++)
-      {
-         if(exist[v]==1)
+				 // if(pgtmp[v]>=1.0)
+					//  pgtmp[v] = 1.0;
+         if(tmp>=1.0)
          {
-            *(PR[v]) = pgtmp[v];
-            //printf("\n %f",D[uu]);
+            tmp = 1.0;
          }
-      }
 
-      pthread_barrier_wait(arg->barrier);
+         PR[v] = tmp;
+      }
+      // //printf("\n Ranks done");
+
+      // pthread_barrier_wait(arg->barrier);
+
+      // //Put temporary pageranks into final pageranks
+      // for(v=i_start;v<i_stop;v++)
+      // {
+      //    if(exist[v]==1)
+      //    {
+      //       *(PR[v]) = pgtmp[v];
+      //       //printf("\n %f",D[uu]);
+      //    }
+      // }
+
+      // pthread_barrier_wait(arg->barrier);
       iterations--;
    }
 
@@ -152,40 +150,9 @@ void* do_work(void* args)
    return NULL;
 }
 
-double **rlu_new_counter(int num_nodes) 
-{
-   double** PR = (double**) malloc(num_nodes*sizeof(double*));
-   if (PR == NULL)
-   {
-        printf("out of memory\n");
-        exit(1); 
-   }  
-
-   int i;
-   for(i=0; i<num_nodes; ++i)
-   {
-      PR[i] = (double *)RLU_ALLOC(sizeof(double));
-      if (PR[i] == NULL)
-      {
-           printf("out of memory\n");
-           exit(1); 
-      }    
-   }
-    
-    // *p_new_counter = 0.0;
-
-    return PR;
-}
-
-
 //Main 
 int main(int argc, char** argv)
 {
-
-   RLU_INIT(RLU_TYPE_FINE_GRAINED, 1);
-
-   RLU_THREAD_INIT(&(thread_arg[0].rlu_td));
-
    FILE *file0 = NULL;
    FILE *f = NULL;
    int N = 0;                         //Total vertices
@@ -231,14 +198,13 @@ int main(int argc, char** argv)
    }
 
    //Memory allocations
-   double** PR;
+   double* PR;
    int* Q;
-   PR = rlu_new_counter(N);
-   // if(posix_memalign((void**) &PR, 64, N * sizeof(double)))
-   // {
-   //    fprintf(stderr, "Allocation of memory failed\n");
-   //    exit(EXIT_FAILURE);
-   // }
+   if(posix_memalign((void**) &PR, 64, N * sizeof(double)))
+   {
+      fprintf(stderr, "Allocation of memory failed\n");
+      exit(EXIT_FAILURE);
+   }
    if(posix_memalign((void**) &Q, 64, N * sizeof(int)))
    {
       fprintf(stderr, "Allocation of memory failed\n");
@@ -455,7 +421,7 @@ int main(int argc, char** argv)
 
    for(i = 0; i < N; i++) {
       if(exist[i]==1)
-         fprintf(f1,"pr(%d) = %f\n", i,*(PR[i]));
+         fprintf(f1,"pr(%d) = %f\n", i,PR[i]);
    }
    printf("\n");
    fclose(f1);
@@ -463,7 +429,7 @@ int main(int argc, char** argv)
    return 0;
 }
 
-int initialize_single_source(double** PR,
+int initialize_single_source(double* PR,
       int*  Q,
       int   source,
       int   N,
@@ -472,7 +438,7 @@ int initialize_single_source(double** PR,
    int i;
    for(i = 0; i < N; i++)
    {
-      *(PR[i]) = 0.15;//initial_rank;
+      PR[i] = 0.15;//initial_rank;
       pgtmp[i] = 0.15;//initial_rank;
       Q[i] = 0;
    }

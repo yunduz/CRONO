@@ -1,0 +1,29 @@
+CC := gcc
+LD := gcc
+
+CFLAGS += -Wall -g -I../ -lrt -O3
+
+LDFLAGS += -lpthread
+LDFLAGS += -lrlu
+
+TARGET = pagerank_sync_free pagerank_rlu_strict
+
+all: $(TARGET)
+
+# gcc -L/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib -I/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib -Wall -o test relaxed_counter_test.c -lrlu
+# LD_LIBRARY_PATH=/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib ./relaxed_counter_test.out
+
+pagerank_rlu_strict.o: pagerank_rlu_strict.c
+	$(CC) $(CFLAGS) -I/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib -c -o $@ $<
+
+pagerank_sync_free.o: pagerank_sync_free.c
+	$(CC) $(CFLAGS) -I/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib -c -o $@ $<
+
+pagerank_rlu_strict: pagerank_rlu_strict.o
+	$(LD) -L/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib -o $@ $^ $(LDFLAGS)
+
+pagerank_sync_free: pagerank_sync_free.o
+	$(LD) -L/cs/systems/home/yra3/repos/scalable-sync/rlu_relaxed_extension/lib -o $@ $^ $(LDFLAGS)
+
+clean:
+	$(RM) $(TARGET) *.o *.out
