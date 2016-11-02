@@ -1,0 +1,19 @@
+
+TRGS = triangle_counting_rlu_relaxed_v1
+
+LIBS += -lpthread -lrt -lrlu
+
+CXXFLAGS = -g --std=c++0x -O3 -mcmodel=medium
+CXXFLAGS += -Wall #-Werror
+
+# LD_LIBRARY_PATH=$HOME/repos/scalable-sync/rlu_relaxed_extension/lib
+
+all: $(TRGS)
+
+triangle_counting_rlu_relaxed_v1: triangle_counting_rlu_relaxed_v1.cc
+
+clean:
+	rm -f $(TRGS) *.o *.dot
+
+%: %.cc ;
+	$(CXX) $(CXXFLAGS) $< -o $@ -I$(HOME)/repos/scalable-sync/rlu_relaxed_extension/lib -L$(HOME)/repos/scalable-sync/rlu_relaxed_extension/lib $(LIBS)
