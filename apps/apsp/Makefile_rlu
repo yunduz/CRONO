@@ -1,0 +1,26 @@
+
+TRGS = apsp_rlu
+
+LIBS += -lpthread -lrt -lrlu
+
+##BOOST_PATH = /run/pkg/boost-/1.53.0-gcc_4.7.3
+
+##BOOST_FLAGS = -I$(BOOST_PATH)/include -L$(BOOST_PATH)/lib -lboost_graph
+
+CXXFLAGS = -g --std=c++0x -O3 -mcmodel=medium
+CXXFLAGS += -Wall #-Werror
+
+# LD_LIBRARY_PATH=$HOME/repos/scalable-sync/rlu_relaxed_extension/lib
+# LD_LIBRARY_PATH=$HOME/repos/scalable-sync/rlu_relaxed_extension/lib ./apsp_rlu 20 19384 26
+
+all: $(TRGS)
+
+apsp_rlu: apsp_rlu.cc
+
+##boost_dijk_real: boost_dijk_real.cc
+
+clean:
+	rm -f $(TRGS) *.o *.dot
+
+%: %.cc ;
+	$(CXX) $(CXXFLAGS) $< -o $@ -I$(HOME)/repos/scalable-sync/rlu_relaxed_extension/lib -L$(HOME)/repos/scalable-sync/rlu_relaxed_extension/lib $(LIBS)
